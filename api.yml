@@ -1,0 +1,148 @@
+openapi: 3.0.3
+info:
+  title: go-oidc-pkce
+  description: >
+    Provider-agnostic OpenID Connect (OIDC) Authorization Code Flow with PKCE
+    for Go server-side web applications.
+  version: 1.0.0
+
+paths:
+  /auth/login:
+    get:
+      summary: Initiate OIDC login
+      description: >
+        Starts the OIDC Authorization Code Flow with PKCE. Generates a
+        cryptographically secure state (CSRF guard), nonce (replay guard), and
+        code_verifier (PKCE), persists them server-side, then redirects the
+        browser to the provider's authorization endpoint.
+      operationId: handleLogin
+      parameters:
+        - name: return_url
+          in: query
+          required: false
+          description: Pre-login destination URL; the user is redirected here after successful authentication.
+          schema:
+            type: string
+            format: uri
+      responses:
+        "302":
+          description: Redirect to the OIDC provider's authorization endpoint.
+          headers:
+            Location:
+              description: Provider authorization URL with state, nonce, code_challenge, and code_challenge_method=S256.
+              schema:
+                type: string
+                format: uri
+        "500":
+          description: Internal server error (entropy failure or state persistence failure).
+          content:
+            text/plain:
+              schema:
+                type: string
+              examples:
+                entropyFailure:
+                  value: "entropy failure"
+                statePersistenceFailed:
+                  value: "state persistence failed"
+
+  /auth/callback:
+    get:
+      summary: OIDC callback
+      description: >
+        Receives the authorization code from the OIDC provider and completes the
+        login flow: validates the state (CSRF), exchanges the code for tokens
+        (PKCE), verifies the ID token, validates the nonce (replay protection),
+        provisions the user (JIT), issues an application session, then redirects
+        to the original return URL or "/".
+      operationId: handleCallback
+      parameters:
+        - name: state
+          in: query
+          required: true
+          description: CSRF token echoed back by the provider; must match the stored value.
+          schema:
+            type: string
+        - name: code
+          in: query
+          required: true
+          description: Authorization code issued by the provider; exchanged for tokens.
+          schema:
+            type: string
+      responses:
+        "302":
+          description: >
+            Authentication successful. Redirects to the stored return_url, or
+            "/" if none was provided. An application session is issued before
+            the redirect (e.g., as a Set-Cookie header).
+          headers:
+            Location:
+              description: Redirect target (return_url or "/").
+              schema:
+                type: string
+            Set-Cookie:
+              description: >
+                Application session cookie (implementation-specific; set by
+                SessionIssuer.Issue).
+              schema:
+                type: string
+        "400":
+          description: Invalid or expired state parameter (CSRF check failed).
+          content:
+            text/plain:
+              schema:
+                type: string
+              example: "invalid or expired state"
+        "401":
+          description: ID token verification failed or nonce mismatch (replay attack detected).
+          content:
+            text/plain:
+              schema:
+                type: string
+              examples:
+                idTokenVerificationFailed:
+                  value: "id_token verification failed"
+                nonceMismatch:
+                  value: "nonce mismatch"
+        "500":
+          description: Internal server error at any step of the token exchange or session issuance.
+          content:
+            text/plain:
+              schema:
+                type: string
+              examples:
+                tokenExchangeFailed:
+                  value: "token exchange failed"
+                missingIdToken:
+                  value: "missing id_token in token response"
+                claimsExtractionFailed:
+                  value: "claims extraction failed"
+                userProvisioningFailed:
+                  value: "user provisioning failed"
+                sessionIssuanceFailed:
+                  value: "session issuance failed"
+
+components:
+  schemas:
+    DefaultClaims:
+      description: Standard OpenID Connect claims extracted from the ID token.
+      type: object
+      properties:
+        sub:
+          type: string
+          description: Stable subject identifier; used as the primary identity key (never email).
+        email:
+          type: string
+          format: email
+          description: User's email address (requires email scope).
+        email_verified:
+          type: boolean
+          description: Whether the provider has verified the email address.
+        name:
+          type: string
+          description: User's full display name (requires profile scope).
+        nonce:
+          type: string
+          description: Single-use replay-protection value; verified against the stored nonce.
+      required:
+        - sub
+        - nonce
