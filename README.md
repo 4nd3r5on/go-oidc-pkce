@@ -9,6 +9,7 @@ Learning project, not maintianed.
 Implements the login flow. More about the flow in
 [Read the GUIDE.md](GUIDE.md)
 
+See [api.yml](api.yml) for the OpenAPI spec.
 
 ## Interfaces you must implement
 
