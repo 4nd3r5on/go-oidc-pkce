@@ -6,6 +6,7 @@ import (
 	"encoding/base64"
 	"errors"
 	"net/url"
+	"strings"
 
 	"golang.org/x/oauth2"
 )
@@ -38,7 +39,14 @@ type ValidateRedirectURIFunc func(ctx context.Context, uri string) error
 // DefaultValidateRedirectURI rejects any URI that is not a relative path —
 // i.e. anything with a host or scheme component — to prevent open redirects.
 // Empty string is accepted (the callback will fall back to "/").
+//
+// Leading backslashes are explicitly rejected: url.Parse does not normalise
+// them, but browsers do (\\evil.com → https://evil.com), so they bypass the
+// host/scheme check without this guard.
 func DefaultValidateRedirectURI(_ context.Context, uri string) error {
+	if strings.HasPrefix(uri, "\\") {
+		return ErrInvalidRedirectURI
+	}
 	u, err := url.Parse(uri)
 	if err != nil || u.Host != "" || u.Scheme != "" {
 		return ErrInvalidRedirectURI

@@ -71,6 +71,30 @@ Custom claims structs must satisfy `HasNonce` (`GetNonce() string`). `DefaultCla
 - `redirect_uri` is validated before state generation; override `ValidateRedirectURIFunc` for allow-list rules.
 - Identity is keyed on `(provider, sub)`.
 
+## Tests
+
+```
+go test ./...
+```
+
+### What is tested
+
+**`DefaultValidateRedirectURI`** (`login_test.go`) — the only unit-testable logic with real value:
+relative paths, absolute URLs, protocol-relative (`//evil.com`), dangerous schemes
+(`javascript:`, `data:`), and backslash-prefixed URIs (`\\evil.com`), which `url.Parse`
+doesn't catch but browsers normalise to `https://evil.com`.
+
+### What is not tested and why
+
+**`Login` and `Callback`** are almost entirely wiring between injected interfaces. Unit tests
+for them would mock `StateSaver`, `ProviderInterface`, `UserUpserter`, and `SessionIssuer`,
+then assert each was called in order — which mirrors the code without testing any real logic.
+Such tests break on minor refactors and catch nothing that a code review wouldn't.
+
+The non-trivial behaviour in both structs (nonce comparison, state invalidation, PKCE
+verification) lives inside the injected dependencies or on the provider side. That behaviour
+belongs in integration tests against a real OIDC provider, not in mocked unit tests.
+
 ## Dependencies
 
 - [`github.com/coreos/go-oidc`](https://github.com/coreos/go-oidc) — JWKS verification, discovery
