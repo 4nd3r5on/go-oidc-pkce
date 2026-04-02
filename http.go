@@ -82,8 +82,11 @@ func DefaultErrorHandlerFunc(w http.ResponseWriter, r *http.Request, err error) 
 	resp, err := json.Marshal(map[string]any{"error": message})
 	if err != nil {
 		slog.Error("failed to marshal response body", "error", err.Error())
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	} else {
+		w.Header().Set("Content-Type", "application/json")
 	}
-	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(code)
 	w.Write(resp)
 }
