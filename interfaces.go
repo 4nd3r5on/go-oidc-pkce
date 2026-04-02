@@ -2,10 +2,13 @@ package oidcpkce
 
 import (
 	"context"
+	"errors"
 
 	"github.com/coreos/go-oidc"
 	"golang.org/x/oauth2"
 )
+
+var ErrStateNotFound = errors.New("state not found")
 
 // StateSaver persists a LoginState, keyed by LoginState.State.
 type StateSaver interface {
@@ -19,7 +22,7 @@ type StateLoader interface {
 }
 
 // StateStore persists LoginState for the ~10 min login window.
-// Load must be atomic and destructive: a second call with the same key returns ErrStateNotFound.
+// Load must be atomic and destructive: a second call with the same key returns [ErrStateNotFound].
 // Implementations: signed HttpOnly cookie, Redis with DEL-after-GET, DB row with used_at.
 type StateStore interface {
 	StateSaver

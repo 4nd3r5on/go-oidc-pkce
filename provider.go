@@ -34,10 +34,9 @@ func (cfg ProviderConfig) GetOIDCConfig() *oidc.Config {
 // Provider wires one OIDC provider (e.g. Authentik, Zitadel, Auth0) to the three
 // stateful interfaces above. Safe for concurrent use after construction.
 type Provider struct {
-	name         string // stored on the user record, e.g. "authentik"
-	oidcProvider *oidc.Provider
-	verifier     *oidc.IDTokenVerifier
-	oauth2Cfg    oauth2.Config
+	name      string // stored on the user record, e.g. "authentik"
+	verifier  *oidc.IDTokenVerifier
+	oauth2Cfg oauth2.Config
 }
 
 func NewProvider(
@@ -49,7 +48,6 @@ func NewProvider(
 		return nil, fmt.Errorf("oidc discovery %q: %w", cfg.IssuerURL, err)
 	}
 	return &Provider{
-		oidcProvider: p,
 		// go-oidc Verify() checks: signature (JWKS + rotation), iss, aud, exp, iat.
 		verifier:  p.Verifier(cfg.GetOIDCConfig()),
 		oauth2Cfg: cfg.GetOAuth2Config(p.Endpoint()),

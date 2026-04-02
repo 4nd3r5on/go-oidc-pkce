@@ -74,9 +74,6 @@ func (l *Login) Login(ctx context.Context, redirectURI string) (string, error) {
 	if redirectURI != "" {
 		err := l.validateRedirectURI(ctx, redirectURI)
 		if err != nil {
-			if errors.Is(err, ErrInvalidRedirectURI) {
-				return "", ErrInvalidRedirectURI
-			}
 			return "", errors.Join(ErrInvalidRedirectURI, err)
 		}
 	}

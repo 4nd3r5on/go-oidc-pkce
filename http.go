@@ -2,19 +2,35 @@ package oidcpkce
 
 import (
 	"encoding/json"
+	"errors"
 	"log/slog"
 	"net/http"
 )
 
+func isAnyErr(err error, refErrs ...error) bool {
+	for _, refErr := range refErrs {
+		if errors.Is(err, refErr) {
+			return true
+		}
+	}
+	return false
+}
+
 func GetErrHTTPCode(err error) int {
-	switch err {
-	case ErrInvalidState,
+	switch {
+	case isAnyErr(err,
+		ErrInvalidState,
 		ErrStateMissing,
 		ErrCodeMissing,
-		ErrInvalidRedirectURI:
+		ErrInvalidRedirectURI,
+	):
 		return http.StatusBadRequest
-	case ErrIDTokenVerificationFailed,
-		ErrNonceMismatch:
+	case errors.Is(err, ErrStateNotFound):
+		return http.StatusNotFound
+	case isAnyErr(err,
+		ErrIDTokenVerificationFailed,
+		ErrNonceMismatch,
+	):
 		return http.StatusUnauthorized
 	default:
 		return http.StatusInternalServerError
@@ -22,14 +38,17 @@ func GetErrHTTPCode(err error) int {
 }
 
 func GetHTTPErrMessage(err error) string {
-	switch err {
+	switch {
 	// Safe to output errors
-	case ErrNonceMismatch,
+	case isAnyErr(err,
+		ErrNonceMismatch,
 		ErrMissingIDToken,
 		ErrStateMissing,
 		ErrCodeMissing,
 		ErrInvalidState,
-		ErrInvalidRedirectURI:
+		ErrInvalidRedirectURI,
+		ErrStateNotFound,
+	):
 		return err.Error()
 	// Internal errors
 	default:
