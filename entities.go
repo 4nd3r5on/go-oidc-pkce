@@ -1,12 +1,12 @@
 package oidcpkce
 
 // LoginState is the per-flow bundle persisted across the browser round-trip.
-// All three fields are single-use and must be invalidated after the callback.
+// All fields except RedirectURI are single-use and must be invalidated after the callback.
 type LoginState struct {
 	State        string // CSRF guard; verified on callback
 	Nonce        string // replay guard; verified inside ID token claims
 	CodeVerifier string // PKCE; sent at token exchange, verified by provider
-	ReturnURL    string // optional pre-login destination
+	RedirectURI  string // optional pre-login destination
 }
 
 // DefaultClaims are the normalised fields extracted from a verified ID token.

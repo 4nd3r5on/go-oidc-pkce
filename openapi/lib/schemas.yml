@@ -1,0 +1,8 @@
+ErrorResponse:
+  description: JSON error body returned by all error responses.
+  type: object
+  properties:
+    error:
+      type: string
+  required:
+    - error

@@ -1,0 +1,9 @@
+InternalServerError:
+  description: Internal server error.
+  content:
+    application/json:
+      schema:
+        $ref: './schemas.yml#/ErrorResponse'
+      examples:
+        internalError:
+          value: {"error": "Internal Server Error"}

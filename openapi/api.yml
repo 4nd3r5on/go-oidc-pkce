@@ -17,7 +17,7 @@ paths:
         browser to the provider's authorization endpoint.
       operationId: handleLogin
       parameters:
-        - name: return_url
+        - name: redirect_uri
           in: query
           required: false
           description: Pre-login destination URL; the user is redirected here after successful authentication.
@@ -33,17 +33,17 @@ paths:
               schema:
                 type: string
                 format: uri
-        "500":
-          description: Internal server error (entropy failure or state persistence failure).
+        "400":
+          description: redirect_uri is not a relative path (open redirect prevention).
           content:
-            text/plain:
+            application/json:
               schema:
-                type: string
+                $ref: './lib/schemas.yml#/ErrorResponse'
               examples:
-                entropyFailure:
-                  value: "entropy failure"
-                statePersistenceFailed:
-                  value: "state persistence failed"
+                invalidRedirectURI:
+                  value: {"error": "invalid redirect_uri"}
+        "500":
+          $ref: './lib/responses.yml#/InternalServerError'
 
   /auth/callback:
     get:
@@ -86,63 +86,28 @@ paths:
               schema:
                 type: string
         "400":
-          description: Invalid or expired state parameter (CSRF check failed).
+          description: Bad request (missing or invalid query parameters, CSRF check failed).
           content:
-            text/plain:
+            application/json:
               schema:
-                type: string
-              example: "invalid or expired state"
+                $ref: './lib/schemas.yml#/ErrorResponse'
+              examples:
+                invalidState:
+                  value: {"error": "invalid or expired state"}
+                stateMissing:
+                  value: {"error": "state parameter missing"}
+                codeMissing:
+                  value: {"error": "code parameter missing"}
         "401":
           description: ID token verification failed or nonce mismatch (replay attack detected).
           content:
-            text/plain:
+            application/json:
               schema:
-                type: string
+                $ref: './lib/schemas.yml#/ErrorResponse'
               examples:
                 idTokenVerificationFailed:
-                  value: "id_token verification failed"
+                  value: {"error": "Unauthorized"}
                 nonceMismatch:
-                  value: "nonce mismatch"
+                  value: {"error": "nonce mismatch"}
         "500":
-          description: Internal server error at any step of the token exchange or session issuance.
-          content:
-            text/plain:
-              schema:
-                type: string
-              examples:
-                tokenExchangeFailed:
-                  value: "token exchange failed"
-                missingIdToken:
-                  value: "missing id_token in token response"
-                claimsExtractionFailed:
-                  value: "claims extraction failed"
-                userProvisioningFailed:
-                  value: "user provisioning failed"
-                sessionIssuanceFailed:
-                  value: "session issuance failed"
-
-components:
-  schemas:
-    DefaultClaims:
-      description: Standard OpenID Connect claims extracted from the ID token.
-      type: object
-      properties:
-        sub:
-          type: string
-          description: Stable subject identifier; used as the primary identity key (never email).
-        email:
-          type: string
-          format: email
-          description: User's email address (requires email scope).
-        email_verified:
-          type: boolean
-          description: Whether the provider has verified the email address.
-        name:
-          type: string
-          description: User's full display name (requires profile scope).
-        nonce:
-          type: string
-          description: Single-use replay-protection value; verified against the stored nonce.
-      required:
-        - sub
-        - nonce
+          $ref: './lib/responses.yml#/InternalServerError'

@@ -18,21 +18,28 @@
 // All three values are single-use and must be invalidated after
 // the callback completes.
 //
-// Flow order
+// redirect_uri (the post-login destination within the app) is validated
+// before any state is generated. [DefaultValidateRedirectURI] rejects
+// absolute URLs to prevent open redirects; supply a [ValidateRedirectURIFunc]
+// to enforce stricter allow-list rules.
 //
-//  1. Generate state, nonce, code_verifier
-//  2. Persist LoginState server-side
-//  3. Redirect to provider authorization endpoint
-//  4. Exchange authorization code (PKCE verified by provider)
-//  5. Verify ID token signature and standard claims
-//  6. Verify nonce
-//  7. JIT provision user (keyed on provider + sub)
-//  8. Issue application session
+// # Flow order
 //
-// Design principles
+//  1. Validate redirect_uri (open redirect prevention)
+//  2. Generate state, nonce, code_verifier
+//  3. Persist LoginState server-side
+//  4. Redirect to provider authorization endpoint
+//  5. Exchange authorization code (PKCE verified by provider)
+//  6. Verify ID token signature and standard claims
+//  7. Verify nonce
+//  8. JIT provision user (keyed on provider + sub)
+//  9. Issue application session
+//
+// # Design principles
 //
 //   - Provider-agnostic (works with any compliant OIDC provider)
-//   - No persistence assumptions (StateStore, UserStore, SessionIssuer are interfaces)
+//   - No persistence assumptions ([StateStore], [UserUpserter], [SessionIssuer] are interfaces)
+//   - redirect_uri validated before state generation; customisable via [ValidateRedirectURIFunc]
 //   - Identity keyed on (provider, sub), never on email
 //   - Safe for concurrent use after construction
 //
