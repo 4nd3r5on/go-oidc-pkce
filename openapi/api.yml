@@ -25,6 +25,9 @@ paths:
             type: string
             format: uri
       responses:
+        # NOTE: The redirect status code and Location header are set by
+        # LoginSuccessHandlerFunc (passed to LoginHandler.HandleSuccess) and are
+        # therefore implementation-specific. The demo uses http.StatusFound (302).
         "302":
           description: Redirect to the OIDC provider's authorization endpoint.
           headers:
@@ -41,7 +44,13 @@ paths:
                 $ref: './lib/schemas.yml#/ErrorResponse'
               examples:
                 invalidRedirectURI:
-                  value: {"error": "invalid redirect_uri"}
+                  # NOTE: The error message is produced by
+                  # errors.Join(ErrInvalidRedirectURI, validateErr).Error(), so it
+                  # includes the underlying error from ValidateRedirectURIFunc
+                  # separated by "\n". With DefaultValidateRedirectURI the message
+                  # is "invalid redirect_uri\ninvalid redirect_uri".
+                  # The exact suffix varies by ValidateRedirectURIFunc implementation.
+                  value: {"error": "invalid redirect_uri\ninvalid redirect_uri"}
         "500":
           $ref: './lib/responses.yml#/InternalServerError'
 
@@ -69,7 +78,11 @@ paths:
           schema:
             type: string
       responses:
-        "302":
+        # NOTE: The redirect status code, Location header, and any session cookie
+        # are set by CallbackSuccessHandlerFunc (passed to
+        # CallbackHandler.HandleSuccess) and are therefore implementation-specific.
+        # The demo uses http.StatusSeeOther (303) and a Set-Cookie with the session ID.
+        "303":
           description: >
             Authentication successful. Redirects to the stored return_url, or
             "/" if none was provided. An application session is issued before
@@ -82,7 +95,7 @@ paths:
             Set-Cookie:
               description: >
                 Application session cookie (implementation-specific; set by
-                SessionIssuer.Issue).
+                SessionIssuer.Issue via CallbackSuccessHandlerFunc).
               schema:
                 type: string
         "400":
@@ -93,7 +106,12 @@ paths:
                 $ref: './lib/schemas.yml#/ErrorResponse'
               examples:
                 invalidState:
-                  value: {"error": "invalid or expired state"}
+                  # NOTE: The error message is produced by
+                  # errors.Join(ErrInvalidState, storeErr).Error(), so it includes
+                  # the underlying StateLoader error separated by "\n".
+                  # For example: "invalid or expired state\nstate not found".
+                  # The exact suffix varies by StateStore implementation.
+                  value: {"error": "invalid or expired state\nstate not found"}
                 stateMissing:
                   value: {"error": "state parameter missing"}
                 codeMissing:

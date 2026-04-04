@@ -64,6 +64,48 @@ mux.Handle("/auth/callback", &oidcpkce.CallbackHandler[MySession]{
 
 Custom claims structs must satisfy `HasNonce` (`GetNonce() string`). `DefaultClaims` covers `sub`, `email`, `email_verified`, `name`, and `nonce`.
 
+## Demo server
+
+`cmd/demo` is a minimal runnable server that wires the library with the in-memory implementations from `pkg/memory`.
+
+### Routes
+
+| Method | Path | Description |
+|---|---|---|
+| `GET` | `/` | Returns JSON with session/user info when authenticated, `{"authenticated":false}` otherwise |
+| `GET` | `/auth/login` | Redirects to the OIDC provider; accepts `?redirect_uri=` for post-login destination |
+| `GET` | `/auth/callback` | Exchanges the authorization code, sets a `session_id` cookie, redirects |
+| `POST` | `/auth/logout` | Deletes the server-side session, clears the cookie, returns `{"ok":true}` |
+
+### Configuration
+
+All config is via environment variables.
+
+| Variable | Required | Default | Description |
+|---|---|---|---|
+| `OIDC_ISSUER_URL` | yes | — | Provider discovery URL (e.g. `https://accounts.google.com`) |
+| `OIDC_CLIENT_ID` | yes | — | OAuth2 client ID |
+| `OIDC_CLIENT_SECRET` | yes | — | OAuth2 client secret |
+| `DEMO_EXTERNAL_URL` | yes | — | Base URL of this server, used to build the callback URL (e.g. `http://localhost:8080`) |
+| `OIDC_PROVIDER_NAME` | no | `oidc` | Label stored on the user record |
+| `DEMO_ADDR` | no | `:8080` | Listen address |
+| `DEMO_SESSION_TTL` | no | `24h` | Session lifetime as a Go duration string (e.g. `1h30m`) |
+
+### Running
+
+Register `<DEMO_EXTERNAL_URL>/auth/callback` as an allowed redirect URI in your provider, then:
+
+```sh
+export OIDC_ISSUER_URL=https://your-issuer
+export OIDC_CLIENT_ID=your-client-id
+export OIDC_CLIENT_SECRET=your-client-secret
+export DEMO_EXTERNAL_URL=http://localhost:8080
+
+go run ./cmd/demo
+```
+
+Then `GET http://localhost:8080/` to check your session status.
+
 ## Design notes
 
 - No storage or session format opinions — all injected via interfaces.
